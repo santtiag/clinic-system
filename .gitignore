@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+.venv/
+venv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker / Infra
+*.log
+postgres_data/
+redis_data/
+rabbitmq_data/
+grafana_data/
+prometheus_data/
+
+# Build
+dist/
+build/
