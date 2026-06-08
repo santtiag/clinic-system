@@ -1,0 +1,87 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: identity-service
+    url: http://identity-service:8000
+    routes:
+      - name: identity-auth
+        paths:
+          - /auth
+        strip_path: false
+      - name: identity-users
+        paths:
+          - /users
+        strip_path: false
+    plugins:
+      - name: cors
+      - name: rate-limiting
+        config:
+          minute: 60
+          policy: local
+      - name: prometheus
+
+  - name: scheduling-service
+    url: http://scheduling-service:8000
+    routes:
+      - name: scheduling-appointments
+        paths:
+          - /appointments
+        strip_path: false
+      - name: scheduling-availability
+        paths:
+          - /availability
+        strip_path: false
+    plugins:
+      - name: cors
+      - name: rate-limiting
+        config:
+          minute: 60
+          policy: local
+      - name: prometheus
+
+  - name: medical-record-service
+    url: http://medical-record-service:8000
+    routes:
+      - name: medical-records
+        paths:
+          - /records
+        strip_path: false
+    plugins:
+      - name: cors
+      - name: prometheus
+
+  - name: billing-service
+    url: http://billing-service:8000
+    routes:
+      - name: billing-invoices
+        paths:
+          - /invoices
+        strip_path: false
+    plugins:
+      - name: cors
+      - name: prometheus
+
+  - name: reporting-service
+    url: http://reporting-service:8000
+    routes:
+      - name: reporting-stats
+        paths:
+          - /reports
+        strip_path: false
+    plugins:
+      - name: cors
+      - name: prometheus
+
+  - name: admin-panel
+    url: http://admin-panel:8000
+    routes:
+      - name: admin-routes
+        paths:
+          - /admin
+        strip_path: false
+    plugins:
+      - name: cors
+      - name: prometheus
+
+consumers: []
