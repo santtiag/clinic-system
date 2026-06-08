@@ -1,0 +1,305 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: clinico-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: clinico
+      POSTGRES_PASSWORD: clinico_secret
+      POSTGRES_DB: clinico
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - clinico-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clinico"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: clinico-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: clinico
+      RABBITMQ_DEFAULT_PASS: clinico_secret
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - clinico-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: clinico-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - clinico-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  kong:
+    image: kong:3.5
+    container_name: clinico-kong
+    restart: unless-stopped
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_PLUGINS: bundled,prometheus,cors
+      KONG_ADMIN_LISTEN: "0.0.0.0:8001"
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+      - "8007:8001"
+    volumes:
+      - ./Kong/kong.yml:/kong/declarative/kong.yml:ro
+    networks:
+      - clinico-network
+
+  prometheus:
+    image: prom/prometheus:v2.47.2
+    container_name: clinico-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - clinico-network
+
+  grafana:
+    image: grafana/grafana:10.1.10
+    container_name: clinico-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - clinico-network
+
+  loki:
+    image: grafana/loki:2.9.8
+    container_name: clinico-loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - clinico-network
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.50
+    container_name: clinico-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+    networks:
+      - clinico-network
+
+  identity-service:
+    build:
+      context: ./services/identity-service
+      dockerfile: Dockerfile
+    container_name: clinico-identity-service
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://clinico:clinico_secret@postgres:5432/identity_db
+      RABBITMQ_URL: amqp://clinico:clinico_secret@rabbitmq:5672/
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: super-secret-key-change-in-production
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+    networks:
+      - clinico-network
+    depends_on:
+      - postgres
+      - rabbitmq
+      - redis
+
+  scheduling-service:
+    build:
+      context: ./services/scheduling-service
+      dockerfile: Dockerfile
+    container_name: clinico-scheduling-service
+    restart: unless-stopped
+    ports:
+      - "8002:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://clinico:clinico_secret@postgres:5432/scheduling_db
+      RABBITMQ_URL: amqp://clinico:clinico_secret@rabbitmq:5672/
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: super-secret-key-change-in-production
+      ALGORITHM: HS256
+    networks:
+      - clinico-network
+    depends_on:
+      - postgres
+      - rabbitmq
+      - redis
+
+  medical-record-service:
+    build:
+      context: ./services/medical-record-service
+      dockerfile: Dockerfile
+    container_name: clinico-medical-record-service
+    restart: unless-stopped
+    ports:
+      - "8003:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://clinico:clinico_secret@postgres:5432/medical_db
+      RABBITMQ_URL: amqp://clinico:clinico_secret@rabbitmq:5672/
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: super-secret-key-change-in-production
+      ALGORITHM: HS256
+    networks:
+      - clinico-network
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  billing-service:
+    build:
+      context: ./services/billing-service
+      dockerfile: Dockerfile
+    container_name: clinico-billing-service
+    restart: unless-stopped
+    ports:
+      - "8004:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://clinico:clinico_secret@postgres:5432/billing_db
+      RABBITMQ_URL: amqp://clinico:clinico_secret@rabbitmq:5672/
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: super-secret-key-change-in-production
+      ALGORITHM: HS256
+    networks:
+      - clinico-network
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  reporting-service:
+    build:
+      context: ./services/reporting-service
+      dockerfile: Dockerfile
+    container_name: clinico-reporting-service
+    restart: unless-stopped
+    ports:
+      - "8005:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://clinico:clinico_secret@postgres:5432/reporting_db
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: super-secret-key-change-in-production
+      ALGORITHM: HS256
+    networks:
+      - clinico-network
+    depends_on:
+      - billing-service
+      - scheduling-service
+
+  notification-worker:
+    build:
+      context: ./workers/notification-worker
+      dockerfile: Dockerfile
+    container_name: clinico-notification-worker
+    restart: unless-stopped
+    environment:
+      RABBITMQ_URL: amqp://clinico:clinico_secret@rabbitmq:5672/
+    networks:
+      - clinico-network
+    depends_on:
+      - rabbitmq
+
+  audit-worker:
+    build:
+      context: ./workers/audit-worker
+      dockerfile: Dockerfile
+    container_name: clinico-audit-worker
+    restart: unless-stopped
+    environment:
+      RABBITMQ_URL: amqp://clinico:clinico_secret@rabbitmq:5672/
+      DATABASE_URL: postgresql+asyncpg://clinico:clinico_secret@postgres:5432/audit_db
+    networks:
+      - clinico-network
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  admin-panel:
+    build:
+      context: ./services/admin-panel
+      dockerfile: Dockerfile
+    container_name: clinico-admin-panel
+    restart: unless-stopped
+    ports:
+      - "8006:8000"
+    environment:
+      SECRET_KEY: super-secret-key-change-in-production
+      ALGORITHM: HS256
+    networks:
+      - clinico-network
+    depends_on:
+      - identity-service
+      - scheduling-service
+      - billing-service
+      - reporting-service
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: clinico-frontend
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=http://kong:8000
+      - NODE_ENV=production
+    ports:
+      - "3001:3001"
+    depends_on:
+      - kong
+    networks:
+      - clinico-network
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  clinico-network:
+    driver: bridge
