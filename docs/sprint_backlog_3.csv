@@ -1,0 +1,4 @@
+﻿ID Product Backlog;Enunciado;D/Tarea;Responsable (Owner);Estado (Status);Horas Estimadas;Día 1 (Cons.);Día 1 (Rest.);Día 2 (Cons.);Día 2 (Rest.);Total Consumido;Total Restante
+HU-FAP-02;Como admin, quiero gestionar los estados de pago y procesar reembolsos para mantener la salud financiera de la clínica.;T-26: Módulo de gestión de estados de pago;Eliel Berrio;Por hacer;20;0;20;0;20;0;20
+HU-FAP-03;Como admin, quiero generar reportes de ingresos y rentabilidad por médico o período para evaluar la clínica.;T-27: Creación de un reporte básico de pagos pendientes;Santiago Romero;Por hacer;16;0;16;0;16;0;16
+HU-FAP-01;Como administrativo, quiero generar recibos de pago automáticamente al terminar una consulta para agilizar la facturación.;T-28: Optimización de generación de recibos;Eliel Berrio;Por hacer;12;0;12;0;12;0;12

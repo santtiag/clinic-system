@@ -1,0 +1,8 @@
+﻿ID Product Backlog,Enunciado,D/Tarea,Responsable (Owner),Estado (Status),Horas Estimadas,Día 1 (Cons.),Día 1 (Rest.),Día 2 (Cons.),Día 2 (Rest.),Total Consumido,Total Restante
+N/A,N/A,T-01: Definición de arquitectura del sistema y elección de stack tecnológico,Santiago Romero,Terminado,16,8,8,8,0,16,0
+N/A,N/A,T-02: Configuración del entorno de desarrollo y repositorio de código,Eliel Berrio,Terminado,8,4,4,4,0,8,0
+N/A,N/A,T-03: Diseño del modelo de datos y creación de la base de datos,Santiago Romero,Terminado,24,8,16,8,8,16,8
+N/A,N/A,T-04: Implementación de la estructura básica del backend (API Gateway / Microservicios),Eliel Berrio,Terminado,24,8,16,8,8,16,8
+HU-GIA-02,"Como usuario, quiero iniciar sesión de forma segura para acceder a mis funciones según mi rol.",T-05: Configuración de autenticación y autorización básica (JWT),Santiago Romero,Terminado,16,8,8,8,0,16,0
+N/A,N/A,T-06: Diseño de interfaces de usuario (UI) y prototipado de vistas principales,Eliel Berrio,Terminado,20,10,10,10,0,20,0
+HU-GIA-01,"Como usuario, quiero registrarme y gestionar mi perfil (datos personales y roles) para acceder a los servicios de la clínica.",T-07: Implementación del sistema de registro de usuarios (Frontend y Backend),Santiago Romero,En progreso,24,0,24,12,12,12,12
