@@ -1,0 +1,7 @@
+﻿ID Product Backlog;Enunciado;D/Tarea;Responsable (Owner);Estado (Status);Horas Estimadas;Día 1 (Cons.);Día 1 (Rest.);Día 2 (Cons.);Día 2 (Rest.);Total Consumido;Total Restante
+HU-FAP-03;Como admin, quiero generar reportes de ingresos y rentabilidad por médico o período para evaluar la clínica.;T-30: Desarrollo de reportes de ingresos;Eliel Berrio;Por hacer;24;0;24;0;24;0;24
+HU-FAP-03;Como admin, quiero generar reportes de ingresos y rentabilidad por médico o período para evaluar la clínica.;T-31: Implementación de filtros por período y especialidad en reportes;Santiago Romero;Por hacer;16;0;16;0;16;0;16
+HU-RPM-01;Como admin, quiero generar estadísticas de demanda (especialidades, diagnósticos frecuentes) para optimizar la atención.;T-32: Módulo de estadísticas de demanda y diagnósticos frecuentes;Eliel Berrio;Por hacer;24;0;24;0;24;0;24
+HU-RPM-01;Como admin, quiero generar estadísticas de demanda (especialidades, diagnósticos frecuentes) para optimizar la atención.;T-33: Desarrollo de análisis de tendencias comparativas de consultas;Santiago Romero;Por hacer;20;0;20;0;20;0;20
+HU-RPM-02;Como usuario, quiero exportar cualquier reporte del sistema en formatos estándar (PDF, Excel, CSV) para fines administrativos.;T-34: Sistema de exportación de reportes en formatos PDF,  Excel y CSV;Eliel Berrio;Por hacer;16;0;16;0;16;0;16
+N/A;N/A;T-35: Pruebas finales de aceptación (UAT) y cierre de proyecto;Santiago Romero;Por hacer;20;0;20;0;20;0;20
