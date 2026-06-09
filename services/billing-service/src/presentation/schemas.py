@@ -1,120 +1,49 @@
-"""
-Presentation schemas for Billing Service.
-"""
-
 from datetime import datetime
-from typing import Optional, List
 from uuid import UUID
+from typing import Optional, List
+from pydantic import BaseModel, Field
 
-from pydantic import Field
+class InvoiceCreateRequest(BaseModel):
+    appointment_id: UUID
+    patient_id: UUID
+    doctor_id: UUID
+    amount: Optional[float] = Field(None, ge=0)
+    description: Optional[str] = "Consulta médica"
 
-from common.schemas import BaseSchema
-
-
-class InvoiceLineItemCreate(BaseSchema):
-    description: str
-    quantity: int = Field(default=1, ge=1)
-    unit_price: float = Field(alias="unitPrice", ge=0)
-    total_price: float = Field(alias="totalPrice", ge=0)
-
-
-class InvoiceLineItemResponse(BaseSchema):
+class InvoiceResponse(BaseModel):
     id: UUID
-    invoice_id: UUID = Field(alias="invoiceId")
-    description: str
-    quantity: int
-    unit_price: float = Field(alias="unitPrice")
-    total_price: float = Field(alias="totalPrice")
-
-
-class InvoiceCreate(BaseSchema):
-    patient_id: str = Field(alias="patientId")
-    appointment_id: str = Field(alias="appointmentId")
-    doctor_id: str = Field(alias="doctorId")
-    consultation_fee: float = Field(alias="consultationFee", ge=0)
-    line_items: Optional[List[InvoiceLineItemCreate]] = Field(default=None, alias="lineItems")
-    notes: Optional[str] = None
-
-
-class InvoiceResponse(BaseSchema):
-    id: UUID
-    invoice_number: str = Field(alias="invoiceNumber")
-    patient_id: UUID = Field(alias="patientId")
-    appointment_id: UUID = Field(alias="appointmentId")
-    doctor_id: UUID = Field(alias="doctorId")
-    subtotal: float
-    tax: float
-    total: float
+    appointment_id: UUID
+    patient_id: UUID
+    doctor_id: UUID
+    amount: float
     status: str
-    notes: Optional[str] = None
-    created_at: datetime = Field(alias="createdAt")
-    updated_at: datetime = Field(alias="updatedAt")
-    paid_at: Optional[datetime] = Field(default=None, alias="paidAt")
+    description: Optional[str]
+    created_at: datetime
 
+class PaymentRequest(BaseModel):
+    invoice_id: UUID
+    amount: float = Field(..., ge=0)
+    method: str
+    transaction_ref: Optional[str] = "TX-MOCK"
 
-class InvoiceDetailResponse(InvoiceResponse):
-    line_items: List[InvoiceLineItemResponse] = Field(default=[], alias="lineItems")
-    payments: List["PaymentResponse"] = []
-
-
-class InvoiceListResponse(BaseSchema):
-    items: List[InvoiceResponse]
-    total: int
-    page: int
-    page_size: int = Field(alias="pageSize")
-
-
-class PaymentCreate(BaseSchema):
-    invoice_id: str = Field(alias="invoiceId")
-    amount: float = Field(ge=0)
-    method: str = Field(default="cash")
-    transaction_reference: Optional[str] = Field(default=None, alias="transactionReference")
-
-
-class PaymentResponse(BaseSchema):
+class PaymentResponse(BaseModel):
     id: UUID
-    invoice_id: UUID = Field(alias="invoiceId")
+    invoice_id: UUID
     amount: float
     method: str
     status: str
-    transaction_reference: Optional[str] = Field(default=None, alias="transactionReference")
-    notes: Optional[str] = None
-    created_at: datetime = Field(alias="createdAt")
-    updated_at: datetime = Field(alias="updatedAt")
-    refunded_at: Optional[datetime] = Field(default=None, alias="refundedAt")
+    transaction_ref: Optional[str]
+    created_at: datetime
 
+class RefundRequest(BaseModel):
+    payment_id: UUID
+    amount: float = Field(..., ge=0)
+    reason: Optional[str]
 
-class RefundRequest(BaseSchema):
-    reason: Optional[str] = None
-
-
-class RevenueReportRequest(BaseSchema):
-    date_from: Optional[datetime] = Field(default=None, alias="dateFrom")
-    date_to: Optional[datetime] = Field(default=None, alias="dateTo")
-    doctor_id: Optional[str] = Field(default=None, alias="doctorId")
-
-
-class RevenueReportResponse(BaseSchema):
-    total_revenue: float = Field(alias="totalRevenue")
-    total_invoices: int = Field(alias="totalInvoices")
-    paid_invoices: int = Field(alias="paidInvoices")
-    pending_invoices: int = Field(alias="pendingInvoices")
-    refunded_invoices: int = Field(alias="refundedInvoices")
-    period: str
-
-
-class DoctorRevenueItem(BaseSchema):
-    doctor_id: UUID = Field(alias="doctorId")
-    doctor_name: str = Field(alias="doctorName")
-    total_revenue: float = Field(alias="totalRevenue")
-    invoice_count: int = Field(alias="invoiceCount")
-
-
-class PendingPaymentReport(BaseSchema):
-    invoice_id: UUID = Field(alias="invoiceId")
-    invoice_number: str = Field(alias="invoiceNumber")
-    patient_id: UUID = Field(alias="patientId")
-    total: float
+class RefundResponse(BaseModel):
+    id: UUID
+    payment_id: UUID
+    amount: float
+    reason: Optional[str]
     status: str
-    created_at: datetime = Field(alias="createdAt")
-    days_overdue: int = Field(alias="daysOverdue")
+    created_at: datetime
