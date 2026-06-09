@@ -44,3 +44,14 @@ class AppointmentORM(Base):
 )
     reason = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.now(), nullable=False)
+
+
+class AppointmentStatusHistoryORM(Base):
+    __tablename__ = "appointment_status_history"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    appointment_id = Column(UUID(as_uuid=True), ForeignKey("appointments.id"), nullable=False, index=True)
+    old_status = Column(String(50), nullable=True)
+    new_status = Column(String(50), nullable=False)
+    changed_by = Column(UUID(as_uuid=True), nullable=True)
+    changed_by_role = Column(String(50), nullable=True)
+    changed_at = Column(DateTime, default=datetime.now(), nullable=False)

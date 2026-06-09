@@ -22,6 +22,9 @@ class User:
         first_name: str,
         last_name: str,
         date_of_birth: date,
+        specialty: str | None = None,
+        license_number: str | None = None,
+        is_active: bool = True,
     ):
         self.user_id = user_id
         self.username = username
@@ -32,3 +35,6 @@ class User:
         self.first_name = first_name
         self.last_name = last_name
         self.date_of_birth = date_of_birth
+        self.specialty = specialty
+        self.license_number = license_number
+        self.is_active = is_active

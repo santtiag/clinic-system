@@ -7,19 +7,20 @@ class AdminDashboardService:
         self._headers = {"Authorization": f"Bearer {token}"}
         self._client = httpx.AsyncClient(timeout=10.0)
 
-    async def _get(self, url: str):
-        resp = await self._client.get(url, headers=self._headers)
+    async def _get(self, url: str, params=None):
+        resp = await self._client.get(url, headers=self._headers, params=params or {})
         resp.raise_for_status()
         return resp.json()
 
     async def dashboard_summary(self):
         try:
-            users = await self._get("http://identity-service:8000/users")
+            users = await self._get("http://identity-service:8000/auth/users")
             total_users = len(users)
             total_patients = len([u for u in users if u.get("role") == "patient"])
             total_doctors = len([u for u in users if u.get("role") == "doctor"])
+            pending_doctors = len([u for u in users if u.get("role") == "doctor" and not u.get("isActive")])
         except Exception:
-            total_users = total_patients = total_doctors = None
+            total_users = total_patients = total_doctors = pending_doctors = None
 
         try:
             appointments = await self._get("http://scheduling-service:8000/appointments/all")
@@ -50,6 +51,7 @@ class AdminDashboardService:
                 "total": total_users,
                 "patients": total_patients,
                 "doctors": total_doctors,
+                "pending_doctors": pending_doctors,
             },
             "appointments": {
                 "total": total_appointments,
@@ -62,3 +64,13 @@ class AdminDashboardService:
             },
             "generated_at": datetime.now().isoformat(),
         }
+
+    async def get_audit_logs(self, user_id=None, start=None, end=None):
+        params = {}
+        if user_id:
+            params["user_id"] = user_id
+        if start:
+            params["start"] = start
+        if end:
+            params["end"] = end
+        return await self._get("http://identity-service:8000/auth/audit", params)

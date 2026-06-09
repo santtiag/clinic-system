@@ -51,6 +51,13 @@ class InvoiceRepository:
         result = await self._session.execute(query)
         return result.scalars().all()
 
+    async def list_by_patient(self, patient_id: UUID, status: Optional[str] = None) -> List[InvoiceORM]:
+        query = select(InvoiceORM).where(InvoiceORM.patient_id == patient_id).order_by(InvoiceORM.created_at.desc())
+        if status:
+            query = query.where(InvoiceORM.status == InvoiceStatus(status))
+        result = await self._session.execute(query)
+        return result.scalars().all()
+
     async def update_status(self, invoice_id: UUID, status: InvoiceStatus) -> Optional[InvoiceORM]:
         inv = await self.get_by_id(invoice_id)
         if inv:

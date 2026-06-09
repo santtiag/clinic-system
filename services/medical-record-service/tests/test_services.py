@@ -13,6 +13,8 @@ def medical_record_service():
     service = MedicalRecordService(session)
     service._records = AsyncMock()
     service._evolutions = AsyncMock()
+    service._prescriptions = AsyncMock()
+    service._attachments = AsyncMock()
     return service
 
 
@@ -49,9 +51,12 @@ async def test_get_patient_history_returns_record_and_evolutions(medical_record_
 
     medical_record_service._records.get_or_create_by_patient = AsyncMock(return_value=record)
     medical_record_service._evolutions.list_by_patient = AsyncMock(return_value=evolutions)
+    medical_record_service._prescriptions.list_by_patient = AsyncMock(return_value=[])
+    medical_record_service._attachments.list_by_evolution = AsyncMock(return_value=[])
 
     result = await medical_record_service.get_patient_history(patient_id)
 
     assert result["record_id"] == record_id
     assert result["patient_id"] == patient_id
     assert result["evolutions"] == evolutions
+    assert result["prescriptions"] == []

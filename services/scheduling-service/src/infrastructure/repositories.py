@@ -2,7 +2,7 @@ from typing import Optional, List
 from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.infrastructure.models import DoctorORM, AvailabilitySlotORM, AppointmentORM
+from src.infrastructure.models import DoctorORM, AvailabilitySlotORM, AppointmentORM, AppointmentStatusHistoryORM
 from src.domain.models import AppointmentStatus
 
 class DoctorRepository:
@@ -20,6 +20,30 @@ class DoctorRepository:
             select(DoctorORM).where(DoctorORM.id == doctor_id)
         )
         return result.scalar_one_or_none()
+
+    async def get_by_user_id(self, user_id: UUID) -> Optional[DoctorORM]:
+        result = await self._session.execute(
+            select(DoctorORM).where(DoctorORM.user_id == user_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def list_all(self) -> List[DoctorORM]:
+        result = await self._session.execute(select(DoctorORM))
+        return result.scalars().all()
+
+    async def upsert(self, user_id: UUID, full_name: str, specialty: str) -> DoctorORM:
+        doctor = await self.get_by_user_id(user_id)
+        if doctor:
+            doctor.full_name = full_name
+            doctor.specialty = specialty
+        else:
+            doctor = DoctorORM(
+                user_id=user_id, full_name=full_name, specialty=specialty
+            )
+            self._session.add(doctor)
+        await self._session.commit()
+        await self._session.refresh(doctor)
+        return doctor
 
 
 class AvailabilityRepository:
@@ -84,8 +108,49 @@ class AppointmentRepository:
         )
         return result.scalars().all()
     
+    async def list_by_doctor(self, doctor_id: UUID) -> List[AppointmentORM]:
+        result = await self._session.execute(
+            select(AppointmentORM)
+            .where(AppointmentORM.doctor_id == doctor_id)
+            .order_by(AppointmentORM.created_at.desc())
+        )
+        return result.scalars().all()
+
     async def list_all(self) -> List[AppointmentORM]:
         result = await self._session.execute(
             select(AppointmentORM).order_by(AppointmentORM.created_at.desc())
+        )
+        return result.scalars().all()
+
+
+class AppointmentStatusHistoryRepository:
+    def __init__(self, session: AsyncSession):
+        self._session = session
+
+    async def create(
+        self,
+        appointment_id: UUID,
+        old_status: str | None,
+        new_status: str,
+        changed_by: UUID | None,
+        changed_by_role: str | None,
+    ) -> AppointmentStatusHistoryORM:
+        entry = AppointmentStatusHistoryORM(
+            appointment_id=appointment_id,
+            old_status=old_status,
+            new_status=new_status,
+            changed_by=changed_by,
+            changed_by_role=changed_by_role,
+        )
+        self._session.add(entry)
+        await self._session.commit()
+        await self._session.refresh(entry)
+        return entry
+
+    async def list_by_appointment(self, appointment_id: UUID) -> List[AppointmentStatusHistoryORM]:
+        result = await self._session.execute(
+            select(AppointmentStatusHistoryORM)
+            .where(AppointmentStatusHistoryORM.appointment_id == appointment_id)
+            .order_by(AppointmentStatusHistoryORM.changed_at.asc())
         )
         return result.scalars().all()
