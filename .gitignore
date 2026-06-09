@@ -27,3 +27,5 @@ prometheus_data/
 # Build
 dist/
 build/
+
+CLAUDE.md
