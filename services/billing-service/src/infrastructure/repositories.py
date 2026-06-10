@@ -90,6 +90,14 @@ class PaymentRepository:
         )
         return result.scalar_one_or_none()
 
+    async def list_by_invoice(self, invoice_id: UUID) -> List[PaymentORM]:
+        result = await self._session.execute(
+            select(PaymentORM)
+            .where(PaymentORM.invoice_id == invoice_id)
+            .order_by(PaymentORM.created_at.desc())
+        )
+        return result.scalars().all()
+
 
 class RefundRepository:
     def __init__(self, session: AsyncSession):

@@ -241,7 +241,8 @@ services:
     networks:
       - clinico-network
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
 
   audit-worker:
     build:
@@ -255,8 +256,10 @@ services:
     networks:
       - clinico-network
     depends_on:
-      - postgres
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   admin-panel:
     build:

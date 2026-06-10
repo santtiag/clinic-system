@@ -10,6 +10,24 @@ RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://clinico:clinico_secret@rabbitmq
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger("audit-worker")
 
+
+async def connect_with_retry(url: str, max_attempts: int = 30, delay: float = 2.0):
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return await connect_robust(url)
+        except Exception as exc:
+            if attempt == max_attempts:
+                raise
+            logger.warning(
+                "RabbitMQ no disponible (intento %s/%s): %s. Reintentando en %ss...",
+                attempt,
+                max_attempts,
+                exc,
+                delay,
+            )
+            await asyncio.sleep(delay)
+
+
 async def process_event(routing_key: str, payload: dict):
     event_type = routing_key.split(".")[0]
     async with SessionLocal() as session:
@@ -21,9 +39,10 @@ async def process_event(routing_key: str, payload: dict):
         )
     logger.info(f"📝 Audit log guardado: {routing_key}")
 
+
 async def run():
     await init_db()
-    connection = await connect_robust(RABBITMQ_URL)
+    connection = await connect_with_retry(RABBITMQ_URL)
     async with connection:
         channel = await connection.channel()
         exchange = await channel.declare_exchange(
@@ -42,6 +61,7 @@ async def run():
                         await process_event(message.routing_key, payload)
                     except Exception as e:
                         logger.error(f"Error en audit worker: {e}")
+
 
 if __name__ == "__main__":
     asyncio.run(run())

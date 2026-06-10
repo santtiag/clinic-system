@@ -8,6 +8,24 @@ RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://clinico:clinico_secret@rabbitmq
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger("notification-worker")
 
+
+async def connect_with_retry(url: str, max_attempts: int = 30, delay: float = 2.0):
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return await connect_robust(url)
+        except Exception as exc:
+            if attempt == max_attempts:
+                raise
+            logger.warning(
+                "RabbitMQ no disponible (intento %s/%s): %s. Reintentando en %ss...",
+                attempt,
+                max_attempts,
+                exc,
+                delay,
+            )
+            await asyncio.sleep(delay)
+
+
 async def process_notification(routing_key: str, payload: dict):
     if routing_key == "appointments.cancelled":
         logger.info(
@@ -27,8 +45,9 @@ async def process_notification(routing_key: str, payload: dict):
     else:
         logger.info(f"📧 Notificación genérica: {routing_key} | {payload}")
 
+
 async def run():
-    connection = await connect_robust(RABBITMQ_URL)
+    connection = await connect_with_retry(RABBITMQ_URL)
     async with connection:
         channel = await connection.channel()
         exchange = await channel.declare_exchange(
@@ -47,6 +66,7 @@ async def run():
                         await process_notification(message.routing_key, payload)
                     except Exception as e:
                         logger.error(f"Error procesando notificación: {e}")
+
 
 if __name__ == "__main__":
     asyncio.run(run())

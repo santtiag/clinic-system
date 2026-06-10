@@ -115,13 +115,16 @@ class ReportingService:
                 output.write("No data\n")
             return output.getvalue()
         elif report_type == "appointments":
-            data = await self.appointment_stats()
+            appointments = await self._fetch_scheduling_appointments()
+            filtered = self._filter_by_date(appointments, start_date, end_date)
             output = io.StringIO()
-            writer = csv.writer(output)
-            writer.writerow(["status", "count"])
-            for status, count in data["by_status"].items():
-                writer.writerow([status, count])
-            writer.writerow(["total", data["total"]])
+            if filtered:
+                writer = csv.DictWriter(output, fieldnames=list(filtered[0].keys()))
+                writer.writeheader()
+                for row in filtered:
+                    writer.writerow({k: str(v) for k, v in row.items()})
+            else:
+                output.write("No data\n")
             return output.getvalue()
         elif report_type == "demand":
             data = await self.demand_report(start_date, end_date)

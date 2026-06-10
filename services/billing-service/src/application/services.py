@@ -73,6 +73,12 @@ class BillingService:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Invoice not found")
         return inv
 
+    async def list_invoice_payments(self, invoice_id: UUID):
+        inv = await self._invoices.get_by_id(invoice_id)
+        if not inv:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Invoice not found")
+        return await self._payments.list_by_invoice(invoice_id)
+
     def generate_receipt_pdf(self, invoice: InvoiceORM) -> bytes:
         try:
             from reportlab.lib.pagesizes import letter

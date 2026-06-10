@@ -33,6 +33,18 @@ def _invoice_response(inv) -> InvoiceResponse:
     )
 
 
+def _payment_response(pay) -> PaymentResponse:
+    return PaymentResponse(
+        id=pay.id,
+        invoice_id=pay.invoice_id,
+        amount=float(pay.amount),
+        method=pay.method.value,
+        status=pay.status.value,
+        transaction_ref=pay.transaction_ref,
+        created_at=pay.created_at,
+    )
+
+
 @router.post("/invoices", status_code=status.HTTP_201_CREATED, response_model=InvoiceResponse)
 async def create_invoice(
     payload: InvoiceCreateRequest,
@@ -92,15 +104,18 @@ async def process_payment(
         patient_id=patient_id,
         user_role=role,
     )
-    return PaymentResponse(
-        id=pay.id,
-        invoice_id=pay.invoice_id,
-        amount=float(pay.amount),
-        method=pay.method.value,
-        status=pay.status.value,
-        transaction_ref=pay.transaction_ref,
-        created_at=pay.created_at,
-    )
+    return _payment_response(pay)
+
+
+@router.get("/invoices/{invoice_id}/payments", response_model=List[PaymentResponse])
+async def list_invoice_payments(
+    invoice_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _staff: dict = Depends(require_staff),
+):
+    service = BillingService(db)
+    payments = await service.list_invoice_payments(invoice_id)
+    return [_payment_response(p) for p in payments]
 
 
 @router.post("/refunds", status_code=status.HTTP_201_CREATED, response_model=RefundResponse)

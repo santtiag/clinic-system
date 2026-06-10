@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, apiDownload } from '@/lib/api';
 import { IncomeReport, AppointmentStats } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -117,11 +117,16 @@ export default function ReportsPage() {
 
   const handleExport = async (type: 'income' | 'appointments') => {
     try {
-      const params = `?report_type=${type}&format=csv&start_date=${startDate}&end_date=${endDate}`;
-      window.open(`${process.env.NEXT_PUBLIC_API_URL}/reports/export${params}`, '_blank');
-      toast.success('Iniciando exportación de datos...');
-    } catch (err: any) {
-      toast.error('Error al exportar reporte');
+      const params = new URLSearchParams({
+        report_type: type,
+        format: 'csv',
+      });
+      if (startDate) params.set('start_date', startDate);
+      if (endDate) params.set('end_date', endDate);
+      await apiDownload(`/reports/export?${params.toString()}`, `${type}_report.csv`);
+      toast.success('Reporte exportado exitosamente');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Error al exportar reporte');
     }
   };
 

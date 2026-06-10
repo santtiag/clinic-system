@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, apiDownload } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -80,7 +80,13 @@ export default function MyInvoicesPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL}/invoices/${inv.id}/receipt.pdf`, '_blank')}
+                          onClick={async () => {
+                            try {
+                              await apiDownload(`/invoices/${inv.id}/receipt.pdf`, `receipt_${inv.id}.pdf`);
+                            } catch (err: unknown) {
+                              toast.error(err instanceof Error ? err.message : 'Error al descargar el recibo');
+                            }
+                          }}
                         >
                           <Download className="w-4 h-4 mr-1" />
                           Recibo
