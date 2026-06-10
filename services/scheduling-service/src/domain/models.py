@@ -14,6 +14,7 @@ class AppointmentStatus(str, Enum):
     IN_ATTENTION = "en_atencion"
     COMPLETED = "completada"
     CANCELLED = "cancelada"
+    CANCELLATION_REQUESTED = "cancelacion_solicitada"
 
 class Doctor:
     def __init__(self, doctor_id: UUID, user_id: UUID, full_name: str, specialty: Specialty):

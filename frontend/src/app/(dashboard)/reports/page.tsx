@@ -41,7 +41,14 @@ function IncomeChart({ data }: { data: IncomeReport }) {
 
 function StatusDonut({ data }: { data: AppointmentStats }) {
   const total = data.total;
-  const entries = Object.entries(data.byStatus);
+  const entries = Object.entries(data.byStatus ?? {});
+  if (total === 0 || entries.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 w-full text-slate-400 text-sm">
+        No hay datos de citas
+      </div>
+    );
+  }
   let currentAngle = 0;
 
   return (
@@ -88,13 +95,24 @@ export default function ReportsPage() {
     queryKey: ['reports-income', startDate, endDate],
     queryFn: async () => {
       const params = `?start_date=${startDate}&end_date=${endDate}`;
-      return apiFetch(`/reports/income${params}`);
+      const r: any = await apiFetch(`/reports/income${params}`);
+      return {
+        totalIncome: r.total_income ?? r.totalIncome ?? 0,
+        count: r.count ?? 0,
+        invoices: r.invoices ?? [],
+      };
     },
   });
 
   const { data: stats, isLoading: isLoadingStats } = useQuery<AppointmentStats>({
     queryKey: ['reports-appointments'],
-    queryFn: async () => apiFetch('/reports/appointments'),
+    queryFn: async () => {
+      const r: any = await apiFetch('/reports/appointments');
+      return {
+        total: r.total ?? 0,
+        byStatus: r.by_status ?? r.byStatus ?? {},
+      };
+    },
   });
 
   const handleExport = async (type: 'income' | 'appointments') => {

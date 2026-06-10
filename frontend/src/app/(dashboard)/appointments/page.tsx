@@ -44,13 +44,33 @@ export default function AppointmentsPage() {
     enabled: !!user,
   });
 
-  const handleCancel = async (id: string) => {
+  const handleRequestCancellation = async (id: string) => {
     try {
-      await apiFetch(`/appointments/${id}/cancel`, { method: 'PATCH' });
-      toast.success('Cita cancelada exitosamente');
+      await apiFetch(`/appointments/${id}/cancellation-request`, { method: 'POST' });
+      toast.success('Solicitud de cancelación enviada');
       refetch();
     } catch (err: any) {
-      toast.error(err.message || 'Error al cancelar la cita');
+      toast.error(err.message || 'Error al solicitar la cancelación');
+    }
+  };
+
+  const handleConfirmCancellation = async (id: string) => {
+    try {
+      await apiFetch(`/appointments/${id}/cancellation-request/confirm`, { method: 'POST' });
+      toast.success('Cancelación confirmada');
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message || 'Error al confirmar la cancelación');
+    }
+  };
+
+  const handleRejectCancellation = async (id: string) => {
+    try {
+      await apiFetch(`/appointments/${id}/cancellation-request/reject`, { method: 'POST' });
+      toast.success('Solicitud de cancelación rechazada');
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message || 'Error al rechazar la cancelación');
     }
   };
 
@@ -207,11 +227,22 @@ export default function AppointmentsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex flex-wrap justify-end gap-2">
-                          {user?.role === 'patient' && a.status === 'programada' && (
-                            <Button variant="ghost" size="sm" className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg" onClick={() => handleCancel(a.id)}>
+                          {user?.role === 'patient' && (a.status === 'programada' || a.status === 'confirmada') && (
+                            <Button variant="ghost" size="sm" className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg" onClick={() => handleRequestCancellation(a.id)}>
                               <XCircle className="w-4 h-4 mr-2" />
-                              Cancelar
+                              Solicitar cancelación
                             </Button>
+                          )}
+                          {(user?.role === 'staff' || user?.role === 'admin') && a.status === 'cancelacion_solicitada' && (
+                            <>
+                              <Button variant="ghost" size="sm" className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg" onClick={() => handleConfirmCancellation(a.id)}>
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Confirmar cancelación
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-600 hover:bg-slate-50 rounded-lg" onClick={() => handleRejectCancellation(a.id)}>
+                                Rechazar
+                              </Button>
+                            </>
                           )}
                           {(user?.role === 'staff' || user?.role === 'admin') && a.status !== 'cancelada' && a.status !== 'completada' && (
                             <Button variant="ghost" size="sm" className="text-violet-500 hover:text-violet-600 hover:bg-violet-50 rounded-lg" onClick={() => handleAssign(a)}>

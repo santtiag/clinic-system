@@ -133,6 +133,115 @@ class SchedulingService:
         })
         return appt
 
+    async def request_cancellation(
+        self,
+        appointment_id: UUID,
+        patient_id: UUID,
+    ):
+        appt = await self._appointments.get_by_id(appointment_id)
+        if not appt:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Appointment not found")
+        if appt.patient_id != patient_id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Appointment not found")
+        if appt.status not in (AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED):
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                f"Cannot request cancellation for appointment in status {appt.status.value}",
+            )
+
+        slot = await self._slots.get_by_id(appt.slot_id)
+        if not slot:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Associated slot not found")
+
+        now = datetime.now()
+        if now > (slot.start_time - timedelta(hours=24)):
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "Cannot cancel within 24 hours before appointment",
+            )
+
+        old_status = appt.status.value
+        appt.status = AppointmentStatus.CANCELLATION_REQUESTED
+        await self._session.commit()
+        await self._history.create(
+            appt.id, old_status, AppointmentStatus.CANCELLATION_REQUESTED.value,
+            patient_id, "patient",
+        )
+        await publish_event("appointments.cancellation_requested", {
+            "appointment_id": str(appt.id),
+            "patient_id": str(appt.patient_id),
+            "slot_id": str(appt.slot_id),
+            "requested_at": datetime.now().isoformat(),
+        })
+        return appt
+
+    async def confirm_cancellation(
+        self,
+        appointment_id: UUID,
+        user_id: UUID | None,
+        user_role: str,
+    ):
+        appt = await self._appointments.get_by_id(appointment_id)
+        if not appt:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Appointment not found")
+        if appt.status != AppointmentStatus.CANCELLATION_REQUESTED:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "No pending cancellation request for this appointment",
+            )
+
+        old_status = appt.status.value
+        appt.status = AppointmentStatus.CANCELLED
+        await self._session.commit()
+        await self._slots.mark_available(appt.slot_id)
+        await self._history.create(
+            appt.id, old_status, AppointmentStatus.CANCELLED.value, user_id, user_role,
+        )
+        await publish_event("appointments.cancelled", {
+            "appointment_id": str(appt.id),
+            "patient_id": str(appt.patient_id),
+            "slot_id": str(appt.slot_id),
+            "cancelled_at": datetime.now().isoformat(),
+        })
+        return appt
+
+    async def reject_cancellation(
+        self,
+        appointment_id: UUID,
+        user_id: UUID | None,
+        user_role: str,
+    ):
+        appt = await self._appointments.get_by_id(appointment_id)
+        if not appt:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Appointment not found")
+        if appt.status != AppointmentStatus.CANCELLATION_REQUESTED:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "No pending cancellation request for this appointment",
+            )
+
+        history = await self._history.list_by_appointment(appointment_id)
+        previous_status = AppointmentStatus.SCHEDULED
+        for entry in reversed(history):
+            if entry.new_status == AppointmentStatus.CANCELLATION_REQUESTED.value:
+                if entry.old_status:
+                    previous_status = AppointmentStatus(entry.old_status)
+                break
+
+        old_status = appt.status.value
+        appt.status = previous_status
+        await self._session.commit()
+        await self._history.create(
+            appt.id, old_status, previous_status.value, user_id, user_role,
+        )
+        await publish_event("appointments.cancellation_rejected", {
+            "appointment_id": str(appt.id),
+            "patient_id": str(appt.patient_id),
+            "restored_status": previous_status.value,
+            "rejected_at": datetime.now().isoformat(),
+        })
+        return appt
+
     async def cancel_appointment(
         self,
         appointment_id: UUID,

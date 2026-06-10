@@ -128,6 +128,76 @@ async def my_appointments(
         data = await service.list_patient_appointments(user_id)
     return [_appt_response(d) for d in data]
 
+@router.post("/appointments/{appointment_id}/cancellation-request", response_model=AppointmentResponse)
+async def request_cancellation(
+    appointment_id: UUID = Path(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    if current_user.get("role") != "patient":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only patients can request cancellation")
+    service = SchedulingService(db)
+    appt = await service.request_cancellation(
+        appointment_id=appointment_id,
+        patient_id=UUID(current_user["user_id"]),
+    )
+    return AppointmentResponse(
+        id=appt.id,
+        patient_id=appt.patient_id,
+        doctor_id=appt.doctor_id,
+        slot_id=appt.slot_id,
+        status=appt.status.value,
+        reason=appt.reason,
+        created_at=appt.created_at,
+    )
+
+
+@router.post("/appointments/{appointment_id}/cancellation-request/confirm", response_model=AppointmentResponse)
+async def confirm_cancellation(
+    appointment_id: UUID = Path(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_staff),
+):
+    service = SchedulingService(db)
+    appt = await service.confirm_cancellation(
+        appointment_id=appointment_id,
+        user_id=UUID(current_user["user_id"]) if current_user.get("user_id") else None,
+        user_role=current_user.get("role", ""),
+    )
+    return AppointmentResponse(
+        id=appt.id,
+        patient_id=appt.patient_id,
+        doctor_id=appt.doctor_id,
+        slot_id=appt.slot_id,
+        status=appt.status.value,
+        reason=appt.reason,
+        created_at=appt.created_at,
+    )
+
+
+@router.post("/appointments/{appointment_id}/cancellation-request/reject", response_model=AppointmentResponse)
+async def reject_cancellation(
+    appointment_id: UUID = Path(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_staff),
+):
+    service = SchedulingService(db)
+    appt = await service.reject_cancellation(
+        appointment_id=appointment_id,
+        user_id=UUID(current_user["user_id"]) if current_user.get("user_id") else None,
+        user_role=current_user.get("role", ""),
+    )
+    return AppointmentResponse(
+        id=appt.id,
+        patient_id=appt.patient_id,
+        doctor_id=appt.doctor_id,
+        slot_id=appt.slot_id,
+        status=appt.status.value,
+        reason=appt.reason,
+        created_at=appt.created_at,
+    )
+
+
 @router.patch("/appointments/{appointment_id}/cancel", response_model=AppointmentResponse)
 async def cancel_appointment(
     appointment_id: UUID = Path(...),
@@ -136,13 +206,16 @@ async def cancel_appointment(
 ):
     service = SchedulingService(db)
     role = current_user.get("role", "")
-    patient_id = UUID(current_user["user_id"]) if role == "patient" else None
-    enforce_window = role == "patient"
+    if role == "patient":
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Patients must use the cancellation request endpoint",
+        )
     appt = await service.cancel_appointment(
         appointment_id=appointment_id,
-        patient_id=patient_id,
+        patient_id=None,
         user_role=role,
-        enforce_window=enforce_window,
+        enforce_window=False,
     )
     return AppointmentResponse(
         id=appt.id,

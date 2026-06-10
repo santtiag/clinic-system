@@ -12,6 +12,7 @@ export const APPOINTMENT_STATUSES = {
   confirmada: { label: 'Confirmada', color: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
   en_atencion: { label: 'En Atención', color: 'bg-amber-100 text-amber-700 border-amber-200' },
   completada: { label: 'Completada', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+  cancelacion_solicitada: { label: 'Cancelación Solicitada', color: 'bg-orange-100 text-orange-700 border-orange-200' },
   cancelada: { label: 'Cancelada', color: 'bg-rose-100 text-rose-700 border-rose-200' },
 };
 

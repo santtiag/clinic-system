@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/providers/auth-provider';
 import { apiFetch } from '@/lib/api';
+import { mapInvoices } from '@/lib/billing';
 import { Invoice, Payment } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,7 +31,7 @@ export default function BillingPage() {
     queryKey: ['invoices', statusFilter],
     queryFn: async () => {
       const endpoint = statusFilter === 'all' ? '/invoices' : `/invoices?status=${statusFilter}`;
-      return apiFetch(endpoint);
+      return mapInvoices(await apiFetch(endpoint));
     },
   });
 
@@ -120,9 +121,9 @@ export default function BillingPage() {
                         {inv.id.substring(0, 8)}...
                       </TableCell>
                       <TableCell className="text-slate-900">
-                        <span className="font-medium">{inv.patientId.substring(0, 8)}...</span>
+                        <span className="font-medium">{(inv.patientId || '—').substring(0, 8)}...</span>
                         <span className="text-slate-400 ml-2">/</span>
-                        <span className="text-slate-500">{inv.doctorId.substring(0, 8)}...</span>
+                        <span className="text-slate-500">{(inv.doctorId || '—').substring(0, 8)}...</span>
                       </TableCell>
                       <TableCell className="font-bold text-slate-900">
                         ${inv.amount.toLocaleString()}

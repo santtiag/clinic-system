@@ -16,7 +16,7 @@ export type User = {
   dateOfBirth: string;
 };
 
-export type AppointmentStatus = 'programada' | 'confirmada' | 'en_atencion' | 'completada' | 'cancelada';
+export type AppointmentStatus = 'programada' | 'confirmada' | 'en_atencion' | 'completada' | 'cancelacion_solicitada' | 'cancelada';
 
 export type Appointment = {
   id: string;
